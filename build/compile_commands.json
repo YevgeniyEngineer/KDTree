@@ -1,7 +1,0 @@
-[
-{
-  "directory": "/home/yevgeniy/Documents/GitHub/KD-Tree/build",
-  "command": "/usr/bin/g++ -I/home/yevgeniy/Documents/GitHub/KD-Tree/include -g -o CMakeFiles/kdtree.dir/src/main.cpp.o -c /home/yevgeniy/Documents/GitHub/KD-Tree/src/main.cpp",
-  "file": "/home/yevgeniy/Documents/GitHub/KD-Tree/src/main.cpp"
-}
-]

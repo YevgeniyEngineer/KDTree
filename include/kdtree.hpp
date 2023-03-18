@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <functional>
 #include <future>
 #include <iterator>
 #include <memory>
@@ -85,7 +86,7 @@ template <std::size_t dimensions> class KdTree final
     /// @param b Second point.
     /// @param axis Axis along which points will be compared against each other.
     /// @return Return True if the first point is less than the second point along the specified axis.
-    inline static bool comparePoints(const PointType &a, const PointType &b, std::size_t axis)
+    inline static bool comparePoints(const PointType &a, const PointType &b, std::size_t axis) noexcept
     {
         return (a[axis] < b[axis]);
     }
@@ -108,7 +109,7 @@ template <std::size_t dimensions> class KdTree final
     /// @param end End iterator.
     /// @param axis Axis along which the median point is searched.
     /// @return Median point along the specified axis.
-    inline PointIter findMedian(const PointIter &begin, const PointIter &end, std::size_t axis)
+    inline static PointIter findMedian(const PointIter &begin, const PointIter &end, std::size_t axis)
     {
         auto length = std::distance(begin, end);
         auto mid = begin + length / 2;
@@ -188,14 +189,12 @@ template <std::size_t dimensions> class KdTree final
             node = std::make_unique<Node>(*mid);
 
             // Launch execution of buildTreeParallel
-            std::future<void> future =
-                std::async(std::launch::async, [&node, &begin, &mid, &axis_depth, &recursion_depth, this]() -> void {
-                    buildTreeParallel(node->left, begin, mid, axis_depth + 1, recursion_depth + 1);
-                });
+            auto left_future = std::async(std::launch::async, &KdTree::buildTreeParallel, this, std::ref(node->left),
+                                          begin, mid, axis_depth + 1, recursion_depth + 1);
 
             buildTreeParallel(node->right, mid + 1, end, axis_depth + 1, recursion_depth + 1);
 
-            future.get();
+            left_future.wait();
         }
     }
 };
