@@ -5,7 +5,6 @@
 #include <cmath>
 #include <cstdint>
 #include <functional>
-#include <future>
 #include <iterator>
 #include <memory>
 #include <thread>
@@ -188,13 +187,12 @@ template <std::size_t dimensions> class KdTree final
             // Update the node and continue building the tree
             node = std::make_unique<Node>(*mid);
 
-            // Launch execution of buildTreeParallel
-            auto left_future = std::async(std::launch::async, &KdTree::buildTreeParallel, this, std::ref(node->left),
-                                          begin, mid, axis_depth + 1, recursion_depth + 1);
+            std::thread left_executor(&KdTree::buildTreeParallel, this, std::ref(node->left), begin, mid,
+                                      axis_depth + 1, recursion_depth + 1);
 
             buildTreeParallel(node->right, mid + 1, end, axis_depth + 1, recursion_depth + 1);
 
-            left_future.wait();
+            left_executor.join();
         }
     }
 };
