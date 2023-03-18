@@ -1,0 +1,3 @@
+/home/yevgeniy/Documents/GitHub/KD-Tree/build/CMakeFiles/kdtree.dir
+/home/yevgeniy/Documents/GitHub/KD-Tree/build/CMakeFiles/edit_cache.dir
+/home/yevgeniy/Documents/GitHub/KD-Tree/build/CMakeFiles/rebuild_cache.dir
