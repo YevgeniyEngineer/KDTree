@@ -94,7 +94,7 @@ template <typename CoordinateType, std::size_t number_of_dimensions> class KDTre
     /// @brief Find K Nearest Neighbours closest to target
     /// @param target Target point
     /// @param k Number of neighbours
-    /// @param result Result containing a pair of point index and distance squared to target
+    /// @param result Result list containing a pair of point index and distance squared to target
     void findKNearestNeighbours(const PointType &target, std::size_t k,
                                 std::vector<std::pair<std::size_t, CoordinateType>> &result) const
     {
@@ -110,6 +110,35 @@ template <typename CoordinateType, std::size_t number_of_dimensions> class KDTre
             max_heap;
 
         findKNearestNeighboursRecursively(root_, target, 0UL, k, max_heap);
+
+        while (!max_heap.empty())
+        {
+            result.push_back(max_heap.top());
+            max_heap.pop();
+        }
+    }
+
+    /// @brief Find K Nearest Neighbours closest to target
+    /// @param target Target point
+    /// @param k Number of neighbours
+    /// @param radius_squared Maximum allowed squared distance between the target and one of the nearest neighbours
+    /// @param result Result list containing a pair of point index and distance squared to target
+    void findKNearestNeighboursWithinRadiusSquared(const PointType &target, std::size_t k,
+                                                   CoordinateType radius_squared,
+                                                   std::vector<std::pair<std::size_t, CoordinateType>> &result) const
+    {
+        if (k == 0)
+        {
+            std::runtime_error("K must be greater than 0.");
+        }
+
+        result.clear();
+
+        std::priority_queue<std::pair<std::size_t, CoordinateType>, std::vector<std::pair<std::size_t, CoordinateType>>,
+                            CompareDistances>
+            max_heap;
+
+        findKNearestNeighborsWithinRadiusSquaredRecursively(root_, target, 0UL, k, radius_squared, max_heap);
 
         while (!max_heap.empty())
         {
@@ -295,6 +324,53 @@ template <typename CoordinateType, std::size_t number_of_dimensions> class KDTre
         if ((delta * delta < max_heap.top().second) || (max_heap.size() < k))
         {
             findKNearestNeighboursRecursively(is_delta_positive ? node->right : node->left, target, index, k, max_heap);
+        }
+    }
+
+    /// @brief Finds K nearest neighbors closest to target point within the specified radius squared
+    /// @param node Root node
+    /// @param target Target point
+    /// @param index Node index
+    /// @param k Number of neighbours to find
+    /// @param radius_squared Radius squared - proximity of neighbours to the target point
+    /// @param max_heap Size of the priority queue
+    void findKNearestNeighborsWithinRadiusSquaredRecursively(
+        const Node *node, const PointType &target, std::size_t index, std::size_t k, CoordinateType radius_squared,
+        std::priority_queue<std::pair<std::size_t, CoordinateType>, std::vector<std::pair<std::size_t, CoordinateType>>,
+                            CompareDistances> &max_heap) const
+    {
+        if (node == nullptr)
+        {
+            return;
+        }
+
+        const auto distance_squared = distanceSquared(target, node->point);
+
+        if (distance_squared <= radius_squared)
+        {
+            if (max_heap.size() < k)
+            {
+                max_heap.emplace(node->index, distance_squared);
+            }
+            else if (distance_squared < max_heap.top().second)
+            {
+                max_heap.pop();
+                max_heap.emplace(node->index, distance_squared);
+            }
+        }
+
+        const auto delta = node->point[index] - target[index];
+
+        index = (index + 1) % number_of_dimensions;
+
+        const bool is_delta_positive = (delta > 0);
+        findKNearestNeighborsWithinRadiusSquaredRecursively(is_delta_positive ? node->left : node->right, target, index,
+                                                            k, radius_squared, max_heap);
+
+        if (delta * delta < max_heap.top().second || max_heap.size() < k || distance_squared <= radius_squared)
+        {
+            findKNearestNeighborsWithinRadiusSquaredRecursively(is_delta_positive ? node->right : node->left, target,
+                                                                index, k, radius_squared, max_heap);
         }
     }
 };

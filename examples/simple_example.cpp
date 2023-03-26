@@ -8,8 +8,9 @@
 
 using CoordinateType = double;
 constexpr std::size_t NUMBER_OF_DIMENSIONS = 3;
-constexpr std::size_t NUMBER_OF_POINTS = 100000;
+constexpr std::size_t NUMBER_OF_POINTS = 1000000;
 constexpr std::size_t NUMBER_OF_NEAREST_NEIGHBORS = 20;
+constexpr CoordinateType RADIUS_SQUARED = 1.0;
 
 void generateRandomPoints(std::vector<neighbour_search::Point<CoordinateType, NUMBER_OF_DIMENSIONS>> &points)
 {
@@ -51,14 +52,31 @@ std::int32_t main(std::int32_t argc, const char **const argv)
 
         auto t5 = std::chrono::high_resolution_clock::now();
 
-        std::vector<std::pair<std::size_t, CoordinateType>> result;
-        kdtree.findKNearestNeighbours(target, NUMBER_OF_NEAREST_NEIGHBORS, result);
+        std::vector<std::pair<std::size_t, CoordinateType>> knn_result;
+        kdtree.findKNearestNeighbours(target, NUMBER_OF_NEAREST_NEIGHBORS, knn_result);
 
         auto t6 = std::chrono::high_resolution_clock::now();
         std::cout << "KDTree nearest K = " << NUMBER_OF_NEAREST_NEIGHBORS
                   << " neighbour search time (s): " << (t6 - t5).count() / 1.0e9 << std::endl;
 
-        // for (const auto &[index, distance] : result)
+        // for (const auto &[index, distance] : knn_result)
+        // {
+        //     std::cout << "Neighbor: " << index << " Distance: " << distance << "\n";
+        // }
+
+        auto t7 = std::chrono::high_resolution_clock::now();
+
+        std::vector<std::pair<std::size_t, CoordinateType>> knn_within_radius_result;
+
+        kdtree.findKNearestNeighboursWithinRadiusSquared(target, NUMBER_OF_NEAREST_NEIGHBORS, RADIUS_SQUARED,
+                                                         knn_within_radius_result);
+
+        auto t8 = std::chrono::high_resolution_clock::now();
+        std::cout << "KDTree nearest K = " << NUMBER_OF_NEAREST_NEIGHBORS
+                  << " neighbour search within radius squared of " << RADIUS_SQUARED
+                  << ", time (s): " << (t8 - t7).count() / 1.0e9 << std::endl;
+
+        // for (const auto &[index, distance] : knn_within_radius_result)
         // {
         //     std::cout << "Neighbor: " << index << " Distance: " << distance << "\n";
         // }
