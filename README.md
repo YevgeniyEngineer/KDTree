@@ -1,2 +1,2 @@
-# KD-Tree
-C++ implementation of KD-Tree
+# KDTree
+C++ implementation of KDTree
