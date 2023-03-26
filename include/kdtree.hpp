@@ -3,8 +3,10 @@
 
 #include <algorithm>   // std::sort, std::nth_element
 #include <array>       // std::array
+#include <chrono>      // std::chrono
 #include <cstdint>     // std::size_t
-#include <memory>      // std::unique_ptr
+#include <iostream>    // std::cout
+#include <stdexcept>   // std::runtime_error
 #include <type_traits> // std::enable_if_t
 #include <vector>      // std::vector
 
@@ -26,13 +28,15 @@ template <typename CoordinateType, std::size_t number_of_dimensions> class KDTre
     KDTree &operator=(KDTreeType &&other) noexcept = default;
     KDTree(KDTreeType &&other) noexcept = default;
     KDTree() = delete;
-    ~KDTree() noexcept
-    {
-        root_ = nullptr;
-    }
+
     explicit KDTree(const std::vector<PointType> &points, bool threaded = true)
         : nodes_(points.begin(), points.end()), root_(nullptr)
     {
+        std::cout << "Number of nodes: " << nodes_.size() << std::endl;
+        if (points.size() < 2)
+        {
+            throw std::runtime_error("KDTree expects at least 2 points.");
+        }
         if (threaded)
         {
             // Concurrent build
@@ -40,7 +44,13 @@ template <typename CoordinateType, std::size_t number_of_dimensions> class KDTre
         else
         {
             // Sequential build
+            root_ = buildTreeRecursively(0UL, nodes_.size(), 0UL);
         }
+    }
+
+    ~KDTree()
+    {
+        root_ = nullptr;
     }
 
   private:
@@ -49,17 +59,44 @@ template <typename CoordinateType, std::size_t number_of_dimensions> class KDTre
         explicit Node(const PointType &point) : point(point), left(nullptr), right(nullptr)
         {
         }
-        ~Node() noexcept
+        ~Node()
         {
             left = nullptr;
             right = nullptr;
         }
         PointType point;
-        std::unique_ptr<Node> left;
-        std::unique_ptr<Node> right;
+        Node *left = nullptr;
+        Node *right = nullptr;
     };
-    std::unique_ptr<Node> root_;
+    Node *root_ = nullptr;
     std::vector<Node> nodes_;
+
+    /// @brief Recursive sequential build of the KDTree
+    /// @param begin first node index
+    /// @param end last node index
+    /// @param index index between first and last
+    /// @return root node
+    inline Node *buildTreeRecursively(const std::size_t begin, const std::size_t end, std::size_t index)
+    {
+        if (end <= begin)
+        {
+            return nullptr;
+        }
+
+        const std::size_t middle = begin + (end - begin) / 2;
+
+        auto node_it = nodes_.begin();
+        std::nth_element(node_it, node_it + middle, node_it + end, [&index](const Node &n1, const Node &n2) -> bool {
+            return (n1.point[index] < n2.point[index]);
+        });
+
+        index = (index + 1) % number_of_dimensions;
+
+        nodes_[middle].left = buildTreeRecursively(begin, middle, index);
+        nodes_[middle].right = buildTreeRecursively(middle + 1, end, index);
+
+        return &nodes_[middle];
+    }
 };
 } // namespace neighbour_search
 
