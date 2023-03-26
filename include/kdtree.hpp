@@ -4,15 +4,22 @@
 #include <algorithm>   // std::sort, std::nth_element
 #include <array>       // std::array
 #include <chrono>      // std::chrono
+#include <cmath>       // std::floor
 #include <cstdint>     // std::size_t
+#include <functional>  // std::ref
+#include <future>      // std::async
 #include <iostream>    // std::cout
 #include <iterator>    // std::distance
 #include <stdexcept>   // std::runtime_error
+#include <thread>      // std::thread
 #include <type_traits> // std::enable_if_t
 #include <vector>      // std::vector
 
 namespace neighbour_search
 {
+const static std::uint32_t DEFAULT_RECURSION_DEPTH =
+    static_cast<std::uint32_t>(std::floor(std::log2(std::thread::hardware_concurrency())));
+
 /// @brief Definition of the point struct
 template <typename CoordinateType, std::size_t number_of_dimensions,
           typename = std::enable_if_t<(number_of_dimensions == 2) || (number_of_dimensions == 3)>>
@@ -33,16 +40,10 @@ template <typename CoordinateType, std::size_t number_of_dimensions> class KDTre
     explicit KDTree(const std::vector<PointType> &points, bool threaded = true)
         : nodes_(points.begin(), points.end()), root_(nullptr)
     {
-        std::cout << "Number of nodes: " << nodes_.size() << std::endl;
-
-        if (points.size() < 2)
-        {
-            throw std::runtime_error("KDTree expects at least 2 points.");
-        }
-
         if (threaded)
         {
             // Concurrent build
+            root_ = buildTreeRecursivelyParallel(nodes_.begin(), nodes_.end(), 0UL);
         }
         else
         {
@@ -89,6 +90,43 @@ template <typename CoordinateType, std::size_t number_of_dimensions> class KDTre
         middle->right = buildTreeRecursively(middle + 1, end, index);
 
         return &(*middle);
+    }
+
+    /// @brief Recursive parallel build of the KDTree
+    /// @param begin begin iterator
+    /// @param end end iterator
+    /// @param index index between first and last
+    /// @return root node
+    Node *buildTreeRecursivelyParallel(typename std::vector<Node>::iterator begin,
+                                       typename std::vector<Node>::iterator end, std::size_t index,
+                                       std::uint32_t recursion_depth = 0U)
+    {
+        if (recursion_depth > DEFAULT_RECURSION_DEPTH)
+        {
+            return buildTreeRecursively(begin, end, index);
+        }
+        else
+        {
+            if (begin >= end)
+            {
+                return nullptr;
+            }
+
+            auto middle = begin + std::distance(begin, end) / 2;
+
+            std::nth_element(begin, middle, end, [&index](const Node &n1, const Node &n2) -> bool {
+                return (n1.point[index] < n2.point[index]);
+            });
+
+            index = (index + 1) % number_of_dimensions;
+
+            auto future = std::async(std::launch::async, &KDTreeType::buildTreeRecursivelyParallel, this,
+                                     std::ref(begin), std::ref(middle), index, recursion_depth + 1);
+            middle->right = buildTreeRecursivelyParallel(middle + 1, end, index, recursion_depth + 1);
+            middle->left = future.get();
+
+            return &(*middle);
+        }
     }
 };
 } // namespace neighbour_search

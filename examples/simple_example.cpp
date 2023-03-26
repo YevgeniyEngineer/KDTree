@@ -35,7 +35,7 @@ std::int32_t main(std::int32_t argc, const char **const argv)
 
         auto t1 = std::chrono::high_resolution_clock::now();
 
-        neighbour_search::KDTree kdtree(points, false);
+        neighbour_search::KDTree kdtree(points, true);
 
         auto t2 = std::chrono::high_resolution_clock::now();
         std::cout << "KDTree construction time (s): " << (t2 - t1).count() / 1.0e9 << std::endl;
