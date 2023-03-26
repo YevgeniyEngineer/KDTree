@@ -146,21 +146,17 @@ template <typename CoordinateType, std::size_t number_of_dimensions> class KDTre
     /// @param sort Sort the resulting neighbour points based on their proximity to the target?
     void findAllNearestNeighboursWithinRadiusSquared(const PointType &target, CoordinateType radius_squared,
                                                      std::vector<std::pair<std::size_t, CoordinateType>> &result,
-                                                     bool sort = true) const
+                                                     bool sort = true) const noexcept
     {
         result.clear();
 
-        std::priority_queue<std::pair<std::size_t, CoordinateType>, std::vector<std::pair<std::size_t, CoordinateType>>,
-                            CompareDistances>
-            max_heap;
+        findAllNeighborsWithinRadiusSquaredRecursively(root_, target, 0UL, radius_squared, result);
 
-        findAllNeighborsWithinRadiusSquaredRecursively(root_, target, 0UL, radius_squared, max_heap);
-
-        result.reserve(max_heap.size());
-        while (!max_heap.empty())
+        if (sort)
         {
-            result.push_back(max_heap.top());
-            max_heap.pop();
+            std::sort(result.begin(), result.end(),
+                      [](const std::pair<std::size_t, CoordinateType> &d1,
+                         const std::pair<std::size_t, CoordinateType> &d2) { return (d1.second < d2.second); });
         }
     }
 
@@ -409,8 +405,7 @@ template <typename CoordinateType, std::size_t number_of_dimensions> class KDTre
     /// @param result Neighbour indices and distances
     void findAllNeighborsWithinRadiusSquaredRecursively(
         const Node *node, const PointType &target, std::size_t index, CoordinateType radius_squared,
-        std::priority_queue<std::pair<std::size_t, CoordinateType>, std::vector<std::pair<std::size_t, CoordinateType>>,
-                            CompareDistances> &max_heap) const noexcept
+        std::vector<std::pair<std::size_t, CoordinateType>> &result) const noexcept
     {
         if (node == nullptr)
         {
@@ -421,7 +416,7 @@ template <typename CoordinateType, std::size_t number_of_dimensions> class KDTre
 
         if (distance_squared <= radius_squared)
         {
-            max_heap.emplace(node->index, distance_squared);
+            result.emplace_back(node->index, distance_squared);
         }
 
         const auto delta = node->point[index] - target[index];
@@ -429,12 +424,12 @@ template <typename CoordinateType, std::size_t number_of_dimensions> class KDTre
 
         const bool is_delta_positive = (delta > 0);
         findAllNeighborsWithinRadiusSquaredRecursively(is_delta_positive ? node->left : node->right, target, index,
-                                                       radius_squared, max_heap);
+                                                       radius_squared, result);
 
-        if ((delta * delta < max_heap.top().second) || (distance_squared <= radius_squared))
+        if ((delta * delta < radius_squared) || (distance_squared <= radius_squared))
         {
             findAllNeighborsWithinRadiusSquaredRecursively(is_delta_positive ? node->right : node->left, target, index,
-                                                           radius_squared, max_heap);
+                                                           radius_squared, result);
         }
     }
 };
