@@ -1,4 +1,4 @@
-#include "../include/kdtree.hpp"
+#include "kdtree.hpp"
 #include <chrono>
 #include <cstdint>
 #include <iostream>
