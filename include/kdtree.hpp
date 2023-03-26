@@ -75,6 +75,7 @@ template <typename CoordinateType, std::size_t number_of_dimensions> class KDTre
     }
 
   private:
+    /// @brief Node structure containing point, pointer to left and right subtrees
     struct Node final
     {
         explicit Node(const PointType &point) : point(point), left(nullptr), right(nullptr)
@@ -114,8 +115,8 @@ template <typename CoordinateType, std::size_t number_of_dimensions> class KDTre
     /// @param end end iterator
     /// @param index index between first and last
     /// @return root node
-    inline Node *buildTreeRecursively(typename std::vector<Node>::iterator begin,
-                                      typename std::vector<Node>::iterator end, std::size_t index) const noexcept
+    Node *buildTreeRecursively(typename std::vector<Node>::iterator begin, typename std::vector<Node>::iterator end,
+                               std::size_t index) const noexcept
     {
         if (begin >= end)
         {
@@ -141,9 +142,9 @@ template <typename CoordinateType, std::size_t number_of_dimensions> class KDTre
     /// @param end end iterator
     /// @param index index between first and last
     /// @return root node
-    inline Node *buildTreeRecursivelyParallel(typename std::vector<Node>::iterator begin,
-                                              typename std::vector<Node>::iterator end, std::size_t index,
-                                              std::uint32_t recursion_depth = 0U) const noexcept
+    Node *buildTreeRecursivelyParallel(typename std::vector<Node>::iterator begin,
+                                       typename std::vector<Node>::iterator end, std::size_t index,
+                                       std::uint32_t recursion_depth = 0U) const noexcept
     {
         if (recursion_depth > DEFAULT_RECURSION_DEPTH)
         {
@@ -179,9 +180,8 @@ template <typename CoordinateType, std::size_t number_of_dimensions> class KDTre
     /// @param index Node index
     /// @param min_distance_squared Distance squared
     /// @param nearest_node Node pointer reference
-    inline void findNearestNeighbourRecursively(const Node *node, const PointType &target, std::size_t index,
-                                                CoordinateType &min_distance_squared,
-                                                Node *&nearest_node) const noexcept
+    void findNearestNeighbourRecursively(const Node *node, const PointType &target, std::size_t index,
+                                         CoordinateType &min_distance_squared, Node *&nearest_node) const noexcept
     {
         if (node == nullptr)
         {
