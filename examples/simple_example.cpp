@@ -9,6 +9,7 @@
 using CoordinateType = double;
 constexpr std::size_t NUMBER_OF_DIMENSIONS = 3;
 constexpr std::size_t NUMBER_OF_POINTS = 100000;
+constexpr std::size_t NUMBER_OF_NEAREST_NEIGHBORS = 20;
 
 void generateRandomPoints(std::vector<neighbour_search::Point<CoordinateType, NUMBER_OF_DIMENSIONS>> &points)
 {
@@ -47,6 +48,20 @@ std::int32_t main(std::int32_t argc, const char **const argv)
 
         auto t4 = std::chrono::high_resolution_clock::now();
         std::cout << "KDTree nearest neighbour search time (s): " << (t4 - t3).count() / 1.0e9 << std::endl;
+
+        auto t5 = std::chrono::high_resolution_clock::now();
+
+        std::vector<std::pair<std::size_t, CoordinateType>> result;
+        kdtree.findKNearestNeighbours(target, NUMBER_OF_NEAREST_NEIGHBORS, result);
+
+        auto t6 = std::chrono::high_resolution_clock::now();
+        std::cout << "KDTree nearest K = " << NUMBER_OF_NEAREST_NEIGHBORS
+                  << " neighbour search time (s): " << (t6 - t5).count() / 1.0e9 << std::endl;
+
+        // for (const auto &[index, distance] : result)
+        // {
+        //     std::cout << "Neighbor: " << index << " Distance: " << distance << "\n";
+        // }
     }
     catch (const std::exception &ex)
     {

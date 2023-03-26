@@ -11,9 +11,11 @@
 #include <iostream>    // std::cout
 #include <iterator>    // std::distance
 #include <limits>      // std::numeric_limits
+#include <queue>       // std::priority_queue
 #include <stdexcept>   // std::runtime_error
 #include <thread>      // std::thread
 #include <type_traits> // std::enable_if_t
+#include <utility>     // std::pair
 #include <vector>      // std::vector
 
 namespace neighbour_search
@@ -41,9 +43,14 @@ template <typename CoordinateType, std::size_t number_of_dimensions> class KDTre
     /// @brief Builds KDTree
     /// @param points List of points
     /// @param threaded Flag that specifies whether threaded execution should be enabled
-    explicit KDTree(const std::vector<PointType> &points, bool threaded = true)
-        : nodes_(points.begin(), points.end()), root_(nullptr)
+    explicit KDTree(const std::vector<PointType> &points, bool threaded = true) : root_(nullptr)
     {
+        nodes_.reserve(points.size());
+        for (std::size_t i = 0; i < points.size(); ++i)
+        {
+            nodes_.emplace_back(points[i], i);
+        }
+
         if (threaded)
         {
             // Concurrent build
@@ -74,14 +81,53 @@ template <typename CoordinateType, std::size_t number_of_dimensions> class KDTre
         return nearest_node->point;
     }
 
+    /// @brief Used as a priority queue comparator
+    struct CompareDistances
+    {
+        inline bool operator()(const std::pair<std::size_t, CoordinateType> &d1,
+                               const std::pair<std::size_t, CoordinateType> &d2) const noexcept
+        {
+            return (d1.second > d2.second);
+        }
+    };
+
+    /// @brief Find K Nearest Neighbours closest to target
+    /// @param target Target point
+    /// @param k Number of neighbours
+    /// @param result Result containing a pair of point index and distance squared to target
+    void findKNearestNeighbours(const PointType &target, std::size_t k,
+                                std::vector<std::pair<std::size_t, CoordinateType>> &result) const
+    {
+        if (k == 0)
+        {
+            std::runtime_error("K must be greater than 0.");
+        }
+
+        result.clear();
+
+        std::priority_queue<std::pair<std::size_t, CoordinateType>, std::vector<std::pair<std::size_t, CoordinateType>>,
+                            CompareDistances>
+            max_heap;
+
+        findKNearestNeighboursRecursively(root_, target, 0UL, k, max_heap);
+
+        while (!max_heap.empty())
+        {
+            result.push_back(max_heap.top());
+            max_heap.pop();
+        }
+    }
+
   private:
     /// @brief Node structure containing point, pointer to left and right subtrees
     struct Node final
     {
-        explicit Node(const PointType &point) : point(point), left(nullptr), right(nullptr)
+        explicit Node(const PointType &point, std::size_t index)
+            : point(point), index(index), left(nullptr), right(nullptr)
         {
         }
         PointType point;
+        std::size_t index;
         Node *left = nullptr;
         Node *right = nullptr;
     };
@@ -207,6 +253,48 @@ template <typename CoordinateType, std::size_t number_of_dimensions> class KDTre
         {
             findNearestNeighbourRecursively(is_delta_positive ? node->right : node->left, target, index,
                                             min_distance_squared, nearest_node);
+        }
+    }
+
+    /// @brief Finds K nearest neighbors closest to target point
+    /// @param node Root node
+    /// @param target Target point
+    /// @param index Node index
+    /// @param k Number of neighbours to find
+    /// @param max_heap Size of the priority queue
+    void findKNearestNeighboursRecursively(
+        const Node *node, const PointType &target, std::size_t index, std::size_t k,
+        std::priority_queue<std::pair<std::size_t, CoordinateType>, std::vector<std::pair<std::size_t, CoordinateType>>,
+                            CompareDistances> &max_heap) const
+    {
+        if (node == nullptr)
+        {
+            return;
+        }
+
+        const auto distance_squared = distanceSquared(target, node->point);
+
+        if (max_heap.size() < k)
+        {
+            max_heap.emplace(node->index, distance_squared);
+        }
+        else if (distance_squared < max_heap.top().second)
+        {
+            max_heap.pop();
+            max_heap.emplace(node->index, distance_squared);
+        }
+
+        const auto delta = node->point[index] - target[index];
+
+        index = (index + 1) % number_of_dimensions;
+
+        const bool is_delta_positive = (delta > 0);
+
+        findKNearestNeighboursRecursively(is_delta_positive ? node->left : node->right, target, index, k, max_heap);
+
+        if ((delta * delta < max_heap.top().second) || (max_heap.size() < k))
+        {
+            findKNearestNeighboursRecursively(is_delta_positive ? node->right : node->left, target, index, k, max_heap);
         }
     }
 };
