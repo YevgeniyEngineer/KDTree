@@ -57,7 +57,8 @@ std::int32_t main(std::int32_t argc, const char **const argv)
 
         auto t6 = std::chrono::high_resolution_clock::now();
         std::cout << "KDTree nearest K = " << NUMBER_OF_NEAREST_NEIGHBORS
-                  << " neighbour search time (s): " << (t6 - t5).count() / 1.0e9 << std::endl;
+                  << " neighbour search time (s): " << (t6 - t5).count() / 1.0e9
+                  << ", total neighbours found: " << knn_result.size() << std::endl;
 
         // for (const auto &[index, distance] : knn_result)
         // {
@@ -74,9 +75,27 @@ std::int32_t main(std::int32_t argc, const char **const argv)
         auto t8 = std::chrono::high_resolution_clock::now();
         std::cout << "KDTree nearest K = " << NUMBER_OF_NEAREST_NEIGHBORS
                   << " neighbour search within radius squared of " << RADIUS_SQUARED
-                  << ", time (s): " << (t8 - t7).count() / 1.0e9 << std::endl;
+                  << ", time (s): " << (t8 - t7).count() / 1.0e9
+                  << ", total neighbours found: " << knn_within_radius_result.size() << std::endl;
 
         // for (const auto &[index, distance] : knn_within_radius_result)
+        // {
+        //     std::cout << "Neighbor: " << index << " Distance: " << distance << "\n";
+        // }
+
+        auto t9 = std::chrono::high_resolution_clock::now();
+
+        std::vector<std::pair<std::size_t, CoordinateType>> nn_within_radius_result;
+        nn_within_radius_result.reserve(1000);
+
+        kdtree.findAllNearestNeighboursWithinRadiusSquared(target, RADIUS_SQUARED, nn_within_radius_result);
+
+        auto t10 = std::chrono::high_resolution_clock::now();
+        std::cout << "KDTree nearest neighbour search within radius squared of " << RADIUS_SQUARED
+                  << ", time (s): " << (t10 - t9).count() / 1.0e9
+                  << ", total neighbours found: " << nn_within_radius_result.size() << std::endl;
+
+        // for (const auto &[index, distance] : nn_within_radius_result)
         // {
         //     std::cout << "Neighbor: " << index << " Distance: " << distance << "\n";
         // }
