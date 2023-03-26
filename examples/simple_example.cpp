@@ -8,7 +8,7 @@
 
 using CoordinateType = double;
 constexpr std::size_t NUMBER_OF_DIMENSIONS = 3;
-constexpr std::size_t NUMBER_OF_POINTS = 1000000;
+constexpr std::size_t NUMBER_OF_POINTS = 100000;
 constexpr std::size_t NUMBER_OF_NEAREST_NEIGHBORS = 20;
 constexpr CoordinateType RADIUS_SQUARED = 1.0;
 
@@ -48,7 +48,9 @@ std::int32_t main(std::int32_t argc, const char **const argv)
         auto nearest_point = kdtree.findNearestNeighbour(target);
 
         auto t4 = std::chrono::high_resolution_clock::now();
-        std::cout << "KDTree nearest neighbour search time (s): " << (t4 - t3).count() / 1.0e9 << std::endl;
+        std::cout << "KDTree nearest neighbour search time (s): " << (t4 - t3).count() / 1.0e9
+                  << ", neighbour index: " << nearest_point.first
+                  << ", neighbour distance squared: " << nearest_point.second << std::endl;
 
         auto t5 = std::chrono::high_resolution_clock::now();
 
