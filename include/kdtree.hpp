@@ -199,13 +199,14 @@ template <typename CoordinateType, std::size_t number_of_dimensions> class KDTre
 
         index = (index + 1) % number_of_dimensions;
 
-        findNearestNeighbourRecursively((delta > 0) ? node->left : node->right, target, index, min_distance_squared,
-                                        nearest_node);
+        const bool is_delta_positive = (delta > 0);
+        findNearestNeighbourRecursively(is_delta_positive ? node->left : node->right, target, index,
+                                        min_distance_squared, nearest_node);
 
         if (delta * delta < min_distance_squared)
         {
-            findNearestNeighbourRecursively((delta > 0) ? node->right : node->left, target, index, min_distance_squared,
-                                            nearest_node);
+            findNearestNeighbourRecursively(is_delta_positive ? node->right : node->left, target, index,
+                                            min_distance_squared, nearest_node);
         }
     }
 };
