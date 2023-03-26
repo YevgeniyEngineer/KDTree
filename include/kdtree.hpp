@@ -6,6 +6,7 @@
 #include <chrono>      // std::chrono
 #include <cstdint>     // std::size_t
 #include <iostream>    // std::cout
+#include <iterator>    // std::distance
 #include <stdexcept>   // std::runtime_error
 #include <type_traits> // std::enable_if_t
 #include <vector>      // std::vector
@@ -33,10 +34,12 @@ template <typename CoordinateType, std::size_t number_of_dimensions> class KDTre
         : nodes_(points.begin(), points.end()), root_(nullptr)
     {
         std::cout << "Number of nodes: " << nodes_.size() << std::endl;
+
         if (points.size() < 2)
         {
             throw std::runtime_error("KDTree expects at least 2 points.");
         }
+
         if (threaded)
         {
             // Concurrent build
@@ -44,13 +47,8 @@ template <typename CoordinateType, std::size_t number_of_dimensions> class KDTre
         else
         {
             // Sequential build
-            root_ = buildTreeRecursively(0UL, nodes_.size(), 0UL);
+            root_ = buildTreeRecursively(nodes_.begin(), nodes_.end(), 0UL);
         }
-    }
-
-    ~KDTree()
-    {
-        root_ = nullptr;
     }
 
   private:
@@ -58,11 +56,6 @@ template <typename CoordinateType, std::size_t number_of_dimensions> class KDTre
     {
         explicit Node(const PointType &point) : point(point), left(nullptr), right(nullptr)
         {
-        }
-        ~Node()
-        {
-            left = nullptr;
-            right = nullptr;
         }
         PointType point;
         Node *left = nullptr;
@@ -72,30 +65,30 @@ template <typename CoordinateType, std::size_t number_of_dimensions> class KDTre
     std::vector<Node> nodes_;
 
     /// @brief Recursive sequential build of the KDTree
-    /// @param begin first node index
-    /// @param end last node index
+    /// @param begin begin iterator
+    /// @param end end iterator
     /// @param index index between first and last
     /// @return root node
-    inline Node *buildTreeRecursively(const std::size_t begin, const std::size_t end, std::size_t index)
+    Node *buildTreeRecursively(typename std::vector<Node>::iterator begin, typename std::vector<Node>::iterator end,
+                               std::size_t index)
     {
-        if (end <= begin)
+        if (begin >= end)
         {
             return nullptr;
         }
 
-        const std::size_t middle = begin + (end - begin) / 2;
+        auto middle = begin + std::distance(begin, end) / 2;
 
-        auto node_it = nodes_.begin();
-        std::nth_element(node_it, node_it + middle, node_it + end, [&index](const Node &n1, const Node &n2) -> bool {
+        std::nth_element(begin, middle, end, [&index](const Node &n1, const Node &n2) -> bool {
             return (n1.point[index] < n2.point[index]);
         });
 
         index = (index + 1) % number_of_dimensions;
 
-        nodes_[middle].left = buildTreeRecursively(begin, middle, index);
-        nodes_[middle].right = buildTreeRecursively(middle + 1, end, index);
+        middle->left = buildTreeRecursively(begin, middle, index);
+        middle->right = buildTreeRecursively(middle + 1, end, index);
 
-        return &nodes_[middle];
+        return &(*middle);
     }
 };
 } // namespace neighbour_search

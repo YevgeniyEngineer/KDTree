@@ -1,4 +1,4 @@
-#include "kdtree.hpp"
+#include "../include/kdtree.hpp"
 #include <chrono>
 #include <cstdint>
 #include <iostream>
@@ -8,7 +8,7 @@
 
 using CoordinateType = double;
 constexpr std::size_t NUMBER_OF_DIMENSIONS = 3;
-constexpr std::size_t NUMBER_OF_POINTS = 10000;
+constexpr std::size_t NUMBER_OF_POINTS = 100000;
 
 void generateRandomPoints(std::vector<neighbour_search::Point<CoordinateType, NUMBER_OF_DIMENSIONS>> &points)
 {
@@ -21,7 +21,8 @@ void generateRandomPoints(std::vector<neighbour_search::Point<CoordinateType, NU
 
     for (std::size_t i = 0; i < NUMBER_OF_POINTS; ++i)
     {
-        points.push_back({dist(gen), dist(gen), dist(gen)});
+        neighbour_search::Point<CoordinateType, NUMBER_OF_DIMENSIONS> point{dist(gen), dist(gen), dist(gen)};
+        points.push_back(point);
     }
 }
 
