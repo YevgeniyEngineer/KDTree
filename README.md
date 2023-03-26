@@ -6,4 +6,4 @@ Supported functionality:
 - Nearest neighbour search
 - K-Nearest neighbour search
 - K-Nearest neighbour search within radius squared
-- Nearest neighbour search within radius squared
+- All nearest neighbour search within radius squared
