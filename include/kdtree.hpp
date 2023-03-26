@@ -10,6 +10,7 @@
 #include <future>      // std::async
 #include <iostream>    // std::cout
 #include <iterator>    // std::distance
+#include <limits>      // std::numeric_limits
 #include <stdexcept>   // std::runtime_error
 #include <thread>      // std::thread
 #include <type_traits> // std::enable_if_t
@@ -17,7 +18,7 @@
 
 namespace neighbour_search
 {
-const static std::uint32_t DEFAULT_RECURSION_DEPTH =
+const static auto DEFAULT_RECURSION_DEPTH =
     static_cast<std::uint32_t>(std::floor(std::log2(std::thread::hardware_concurrency())));
 
 /// @brief Definition of the point struct
@@ -37,6 +38,9 @@ template <typename CoordinateType, std::size_t number_of_dimensions> class KDTre
     KDTree(KDTreeType &&other) noexcept = default;
     KDTree() = delete;
 
+    /// @brief Builds KDTree
+    /// @param points List of points
+    /// @param threaded Flag that specifies whether threaded execution should be enabled
     explicit KDTree(const std::vector<PointType> &points, bool threaded = true)
         : nodes_(points.begin(), points.end()), root_(nullptr)
     {
@@ -50,6 +54,24 @@ template <typename CoordinateType, std::size_t number_of_dimensions> class KDTre
             // Sequential build
             root_ = buildTreeRecursively(nodes_.begin(), nodes_.end(), 0UL);
         }
+
+        if (root_ == nullptr)
+        {
+            throw std::runtime_error("KDTree is empty.");
+        }
+    }
+
+    /// @brief Find a single nearest neighbour
+    /// @param target Point of interest
+    /// @return Closest point to the target
+    PointType findNearestNeighbour(const PointType &target) const
+    {
+        Node *nearest_node = nullptr;
+        CoordinateType min_distance_squared = std::numeric_limits<CoordinateType>::max();
+
+        findNearestNeighbourRecursively(root_, target, 0UL, min_distance_squared, nearest_node);
+
+        return nearest_node->point;
     }
 
   private:
@@ -65,13 +87,35 @@ template <typename CoordinateType, std::size_t number_of_dimensions> class KDTre
     Node *root_ = nullptr;
     std::vector<Node> nodes_;
 
+    /// @brief Distance squared between two points
+    /// @param p1 first point
+    /// @param p2 second point
+    /// @return distance squared between points
+    constexpr inline CoordinateType distanceSquared(const PointType &p1, const PointType &p2) const noexcept
+    {
+        static_assert((number_of_dimensions == 2) || (number_of_dimensions == 3));
+        if constexpr (number_of_dimensions == 2)
+        {
+            const auto dx = p1[0] - p2[0];
+            const auto dy = p1[1] - p2[1];
+            return (dx * dx) + (dy * dy);
+        }
+        else
+        {
+            const auto dx = p1[0] - p2[0];
+            const auto dy = p1[1] - p2[1];
+            const auto dz = p1[2] - p2[2];
+            return (dx * dx) + (dy * dy) + (dz * dz);
+        }
+    }
+
     /// @brief Recursive sequential build of the KDTree
     /// @param begin begin iterator
     /// @param end end iterator
     /// @param index index between first and last
     /// @return root node
-    Node *buildTreeRecursively(typename std::vector<Node>::iterator begin, typename std::vector<Node>::iterator end,
-                               std::size_t index)
+    inline Node *buildTreeRecursively(typename std::vector<Node>::iterator begin,
+                                      typename std::vector<Node>::iterator end, std::size_t index) const noexcept
     {
         if (begin >= end)
         {
@@ -97,9 +141,9 @@ template <typename CoordinateType, std::size_t number_of_dimensions> class KDTre
     /// @param end end iterator
     /// @param index index between first and last
     /// @return root node
-    Node *buildTreeRecursivelyParallel(typename std::vector<Node>::iterator begin,
-                                       typename std::vector<Node>::iterator end, std::size_t index,
-                                       std::uint32_t recursion_depth = 0U)
+    inline Node *buildTreeRecursivelyParallel(typename std::vector<Node>::iterator begin,
+                                              typename std::vector<Node>::iterator end, std::size_t index,
+                                              std::uint32_t recursion_depth = 0U) const noexcept
     {
         if (recursion_depth > DEFAULT_RECURSION_DEPTH)
         {
@@ -126,6 +170,42 @@ template <typename CoordinateType, std::size_t number_of_dimensions> class KDTre
             middle->left = future.get();
 
             return &(*middle);
+        }
+    }
+
+    /// @brief Finds closest point to target
+    /// @param node Pointer to the root node
+    /// @param target Target point
+    /// @param index Node index
+    /// @param min_distance_squared Distance squared
+    /// @param nearest_node Node pointer reference
+    inline void findNearestNeighbourRecursively(const Node *node, const PointType &target, std::size_t index,
+                                                CoordinateType &min_distance_squared,
+                                                Node *&nearest_node) const noexcept
+    {
+        if (node == nullptr)
+        {
+            return;
+        }
+
+        const auto distance_squared = distanceSquared(target, node->point);
+        if (distance_squared < min_distance_squared)
+        {
+            min_distance_squared = distance_squared;
+            nearest_node = const_cast<Node *>(node);
+        }
+
+        const auto delta = node->point[index] - target[index];
+
+        index = (index + 1) % number_of_dimensions;
+
+        findNearestNeighbourRecursively((delta > 0) ? node->left : node->right, target, index, min_distance_squared,
+                                        nearest_node);
+
+        if (delta * delta < min_distance_squared)
+        {
+            findNearestNeighbourRecursively((delta > 0) ? node->right : node->left, target, index, min_distance_squared,
+                                            nearest_node);
         }
     }
 };

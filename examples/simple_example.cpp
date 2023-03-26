@@ -39,6 +39,14 @@ std::int32_t main(std::int32_t argc, const char **const argv)
 
         auto t2 = std::chrono::high_resolution_clock::now();
         std::cout << "KDTree construction time (s): " << (t2 - t1).count() / 1.0e9 << std::endl;
+
+        neighbour_search::Point<CoordinateType, NUMBER_OF_DIMENSIONS> target{0.2, -1.3, 2.5};
+        auto t3 = std::chrono::high_resolution_clock::now();
+
+        auto nearest_point = kdtree.findNearestNeighbour(target);
+
+        auto t4 = std::chrono::high_resolution_clock::now();
+        std::cout << "KDTree nearest neighbour search time (s): " << (t4 - t3).count() / 1.0e9 << std::endl;
     }
     catch (const std::exception &ex)
     {
