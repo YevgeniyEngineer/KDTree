@@ -11,7 +11,7 @@ int main()
 {
     using namespace data_structure;
 
-    std::size_t number_of_points = 50'000;
+    std::size_t number_of_points = 10'000'000;
     constexpr std::size_t number_of_dimensions = 3;
 
     try
@@ -33,7 +33,20 @@ int main()
         auto t1 = std::chrono::high_resolution_clock::now();
         KdTree<number_of_dimensions> kdtree(points, ExecutionType::PARALLEL);
         auto t2 = std::chrono::high_resolution_clock::now();
-        std::cout << "Elapsed time: " << (t2 - t1).count() / 1e9 << " seconds" << std::endl;
+        std::cout << "Elapsed time (construction): " << (t2 - t1).count() / 1e9 << " seconds" << std::endl;
+
+        KDTreePoint<number_of_dimensions> random_point{dist(gen), dist(gen), dist(gen)};
+        auto t3 = std::chrono::high_resolution_clock::now();
+        auto nearest_point = kdtree.findNearestNeighbor(random_point);
+        auto t4 = std::chrono::high_resolution_clock::now();
+        std::cout << "Elapsed time (query): " << (t4 - t3).count() / 1e9 << " seconds" << std::endl;
+
+        std::cout << "( ";
+        for (const auto &coordiate : nearest_point.coordinates)
+        {
+            std::cout << coordiate << " ";
+        }
+        std::cout << ") \n";
     }
     catch (const std::exception &ex)
     {

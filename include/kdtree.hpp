@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <functional>
 #include <iterator>
+#include <limits>
 #include <memory>
 #include <thread>
 #include <vector>
@@ -19,8 +20,8 @@ enum class ExecutionType : std::uint8_t
 };
 
 // Finds maximum recursion depth for threaded building of KD-Tree
-const static std::uint8_t DEFAULT_RECURSION_DEPTH =
-    static_cast<std::uint8_t>(std::floor(std::log2(std::thread::hardware_concurrency())));
+const static std::size_t DEFAULT_RECURSION_DEPTH =
+    static_cast<std::size_t>(std::floor(std::log2(std::thread::hardware_concurrency())));
 
 /// @brief Point type used in the construction and nearest neighbour search of the KDTree.
 /// @tparam dimensions Number of dimensions in the point.
@@ -60,6 +61,15 @@ template <std::size_t dimensions> class KdTree final
             break;
         }
         }
+    }
+
+    PointType findNearestNeighbor(const PointType &query_point) const
+    {
+        if (!root_)
+        {
+            throw std::runtime_error("KDTree is empty. Build the tree before searching.");
+        }
+        return findNearestNeighborRecursively(root_, query_point, 0);
     }
 
   private:
@@ -164,7 +174,7 @@ template <std::size_t dimensions> class KdTree final
     /// @param axis_depth Dimension along which to split the tree.
     /// @param recursion_depth Current recursion depth until the algorithm switches to sequential build strategy.
     void buildTreeParallel(NodePtr &node, PointIter begin, PointIter end, std::size_t axis_depth,
-                           std::size_t recursion_depth = 0U)
+                           std::size_t recursion_depth)
     {
         // Sequential build
         if (recursion_depth > DEFAULT_RECURSION_DEPTH)
@@ -194,6 +204,73 @@ template <std::size_t dimensions> class KdTree final
 
             left_executor.join();
         }
+    }
+
+    inline static bool isInvalidPoint(const PointType &point) noexcept
+    {
+        for (const auto &coordinate : point.coordinates)
+        {
+            if (coordinate == std::numeric_limits<double>::max())
+            {
+                return (true);
+            }
+        }
+        return (false);
+    }
+
+    inline static double squaredDistance(const PointType &a, const PointType &b) noexcept
+    {
+        double sum = 0.0;
+        for (std::size_t i = 0; i < dimensions; ++i)
+        {
+            double diff = a[i] - b[i];
+            sum += diff * diff;
+        }
+        return sum;
+    }
+
+    PointType findNearestNeighborRecursively(const NodePtr &node, const PointType &query_point, size_t depth) const
+    {
+        if (!node)
+        {
+            return PointType{}; // Return an invalid point
+        }
+
+        size_t axis = depth % dimensions;
+        bool search_left_subtree = query_point[axis] < node->point[axis];
+
+        PointType current_best;
+        if (search_left_subtree)
+        {
+            current_best = findNearestNeighborRecursively(node->left, query_point, depth + 1);
+        }
+        else
+        {
+            current_best = findNearestNeighborRecursively(node->right, query_point, depth + 1);
+        }
+
+        if (isInvalidPoint(current_best) ||
+            squaredDistance(node->point, query_point) < squaredDistance(current_best, query_point))
+        {
+            current_best = node->point;
+        }
+
+        double axis_distance_squared =
+            (query_point[axis] - node->point[axis]) * (query_point[axis] - node->point[axis]);
+        if (axis_distance_squared < squaredDistance(current_best, query_point))
+        {
+            PointType oppositeBest = search_left_subtree
+                                         ? findNearestNeighborRecursively(node->right, query_point, depth + 1)
+                                         : findNearestNeighborRecursively(node->left, query_point, depth + 1);
+
+            if (!isInvalidPoint(oppositeBest) &&
+                squaredDistance(oppositeBest, query_point) < squaredDistance(current_best, query_point))
+            {
+                current_best = oppositeBest;
+            }
+        }
+
+        return current_best;
     }
 };
 } // namespace data_structure
