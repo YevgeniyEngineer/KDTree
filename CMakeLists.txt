@@ -9,7 +9,7 @@ project(kdtree)
 
 set(BUILD_TESTS True)
 
-set(CXX_STANDARD 20)
+set(CXX_STANDARD 17)
 set(CXX_STANDARD_REQUIRED ON)
 
 find_package(TBB REQUIRED)
