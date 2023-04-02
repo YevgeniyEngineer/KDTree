@@ -6,11 +6,13 @@
 #include <chrono>      // std::chrono
 #include <cmath>       // std::floor
 #include <cstdint>     // std::size_t
+#include <execution>   // std::execution
 #include <functional>  // std::ref
 #include <future>      // std::async
 #include <iostream>    // std::cout
 #include <iterator>    // std::distance
 #include <limits>      // std::numeric_limits
+#include <numeric>     // std::iota
 #include <queue>       // std::priority_queue
 #include <stdexcept>   // std::runtime_error
 #include <thread>      // std::thread
@@ -81,6 +83,45 @@ template <typename CoordinateType, std::size_t number_of_dimensions> class KDTre
         return std::make_pair(nearest_node->index, min_distance_squared);
     }
 
+    /// @brief Find a single nearest neighbour for each provided target point
+    /// @param targets Points of interest
+    /// @param neighbours A List of neighbour for each target point
+    /// @param thread Whether to use multithreading to speedup nearest neighbour search
+    /// @return Result list containing a single neighbour index and distance squared for each target point
+    void findNearestNeighbourForEachTarget(const std::vector<PointType> &targets,
+                                           std::vector<std::pair<std::size_t, CoordinateType>> &neighbours,
+                                           bool threaded = true) const
+    {
+        neighbours.clear();
+        neighbours.resize(targets.size());
+
+        std::vector<std::size_t> indices(targets.size());
+        std::iota(indices.begin(), indices.end(), 0UL);
+
+        if (threaded)
+        {
+            std::for_each(std::execution::par, indices.begin(), indices.end(), [&](const std::size_t i) -> void {
+                Node *nearest_node = nullptr;
+                CoordinateType min_distance_squared = std::numeric_limits<CoordinateType>::max();
+
+                findNearestNeighbourRecursively(root_, targets[i], 0UL, min_distance_squared, nearest_node);
+
+                neighbours[i] = std::make_pair(nearest_node->index, min_distance_squared);
+            });
+        }
+        else
+        {
+            std::for_each(std::execution::seq, indices.begin(), indices.end(), [&](const std::size_t i) -> void {
+                Node *nearest_node = nullptr;
+                CoordinateType min_distance_squared = std::numeric_limits<CoordinateType>::max();
+
+                findNearestNeighbourRecursively(root_, targets[i], 0UL, min_distance_squared, nearest_node);
+
+                neighbours[i] = std::make_pair(nearest_node->index, min_distance_squared);
+            });
+        }
+    }
+
     /// @brief Find K Nearest Neighbours closest to target
     /// @param target Target point
     /// @param k Number of neighbours
@@ -104,7 +145,7 @@ template <typename CoordinateType, std::size_t number_of_dimensions> class KDTre
         result.reserve(max_heap.size());
         while (!max_heap.empty())
         {
-            result.push_back(max_heap.top());
+            result.emplace_back(max_heap.top());
             max_heap.pop();
         }
     }
@@ -134,7 +175,7 @@ template <typename CoordinateType, std::size_t number_of_dimensions> class KDTre
         result.reserve(max_heap.size());
         while (!max_heap.empty())
         {
-            result.push_back(max_heap.top());
+            result.emplace_back(max_heap.top());
             max_heap.pop();
         }
     }
