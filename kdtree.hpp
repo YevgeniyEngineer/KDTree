@@ -3,13 +3,11 @@
 
 #include <algorithm>   // std::sort, std::nth_element
 #include <array>       // std::array
-#include <chrono>      // std::chrono
 #include <cmath>       // std::floor
 #include <cstdint>     // std::size_t
 #include <execution>   // std::execution
 #include <functional>  // std::ref
 #include <future>      // std::async
-#include <iostream>    // std::cout
 #include <iterator>    // std::distance
 #include <limits>      // std::numeric_limits
 #include <numeric>     // std::iota
