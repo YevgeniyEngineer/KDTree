@@ -5,52 +5,65 @@ project(kdtree)
 # Compillation instructions
 # cd build
 # cmake -DCMAKE_BUILD_TYPE=Release ..
-# make 
-
+# make
 set(BUILD_TESTS True)
 
-set(CXX_STANDARD 17)
-set(CXX_STANDARD_REQUIRED ON)
-
+# Add library
 find_package(TBB REQUIRED)
 
-add_executable(${PROJECT_NAME} 
-    ${CMAKE_CURRENT_SOURCE_DIR}/examples/simple_example.cpp
+add_library(${PROJECT_NAME} INTERFACE
+    ${CMAKE_CURRENT_SOURCE_DIR}/kdtree.hpp
+)
+
+set_target_properties(${PROJECT_NAME} PROPERTIES
+    CXX_STANDARD 17
+    CXX_STANDARD_REQUIRED ON
+    CXX_EXTENSIONS OFF
 )
 
 target_include_directories(${PROJECT_NAME}
     INTERFACE
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-        $<INSTALL_INTERFACE:include>
-    PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/include
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+    $<INSTALL_INTERFACE:include>
 )
 
 target_link_libraries(${PROJECT_NAME}
+    INTERFACE
     TBB::tbb
 )
 
-if (BUILD_TESTS)
+add_library(kdtree::kdtree ALIAS ${PROJECT_NAME})
+
+# Build example
+set(EXAMPLE_NAME example_kdtree)
+
+add_executable(${EXAMPLE_NAME}
+    ${CMAKE_CURRENT_SOURCE_DIR}/example_kdtree.cpp
+)
+
+target_link_libraries(${EXAMPLE_NAME}
+    PRIVATE
+    kdtree::kdtree
+)
+
+# Build tests
+if(BUILD_TESTS)
     find_package(GTest REQUIRED)
 
     enable_testing()
 
-    set(TEST_NAME ${PROJECT_NAME}_test)
+    set(TEST_NAME test_kdtree)
 
     include(GoogleTest)
 
     add_executable(${TEST_NAME}
-        ${CMAKE_CURRENT_SOURCE_DIR}/tests/kdtree_test.cpp
-    )
-
-    target_include_directories(${TEST_NAME}
-        PRIVATE
-            ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/test_kdtree.cpp
     )
 
     target_link_libraries(${TEST_NAME}
+        PRIVATE
         GTest::gtest_main
-        TBB::tbb
+        kdtree::kdtree
     )
 
     gtest_discover_tests(${TEST_NAME})
