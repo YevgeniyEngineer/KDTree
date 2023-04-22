@@ -11,11 +11,13 @@ set(BUILD_TESTS True)
 # Add library
 find_package(TBB REQUIRED)
 
-add_library(${PROJECT_NAME} INTERFACE
+add_library(${PROJECT_NAME}
+    INTERFACE
     ${CMAKE_CURRENT_SOURCE_DIR}/kdtree.hpp
 )
 
-set_target_properties(${PROJECT_NAME} PROPERTIES
+set_target_properties(${PROJECT_NAME}
+    PROPERTIES
     CXX_STANDARD 17
     CXX_STANDARD_REQUIRED ON
     CXX_EXTENSIONS OFF
@@ -32,7 +34,10 @@ target_link_libraries(${PROJECT_NAME}
     TBB::tbb
 )
 
-add_library(kdtree::kdtree ALIAS ${PROJECT_NAME})
+add_library(kdtree::kdtree
+    ALIAS
+    ${PROJECT_NAME}
+)
 
 # Build example
 set(EXAMPLE_NAME example_kdtree)
