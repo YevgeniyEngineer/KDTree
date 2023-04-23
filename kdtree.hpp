@@ -321,7 +321,7 @@ template <typename CoordinateType, std::size_t number_of_dimensions> class KDTre
         }
 
         const auto distance_squared = distanceSquared(target, node->point);
-        if (distance_squared < min_distance_squared)
+        if (distance_squared <= min_distance_squared)
         {
             min_distance_squared = distance_squared;
             nearest_node = const_cast<Node *>(node);
@@ -400,7 +400,6 @@ template <typename CoordinateType, std::size_t number_of_dimensions> class KDTre
         }
 
         const auto distance_squared = distanceSquared(target, node->point);
-
         if (distance_squared <= radius_squared)
         {
             if (max_heap.size() < k)
@@ -422,7 +421,7 @@ template <typename CoordinateType, std::size_t number_of_dimensions> class KDTre
         findKNearestNeighborsWithinRadiusSquaredRecursively(is_delta_positive ? node->left : node->right, target, index,
                                                             k, radius_squared, max_heap);
 
-        if ((delta * delta <= max_heap.top().second) || (max_heap.size() < k) || (distance_squared <= radius_squared))
+        if ((delta * delta <= max_heap.top().second) || (max_heap.size() < k))
         {
             findKNearestNeighborsWithinRadiusSquaredRecursively(is_delta_positive ? node->right : node->left, target,
                                                                 index, k, radius_squared, max_heap);
@@ -445,7 +444,6 @@ template <typename CoordinateType, std::size_t number_of_dimensions> class KDTre
         }
 
         const auto distance_squared = distanceSquared(target, node->point);
-
         if (distance_squared <= radius_squared)
         {
             result.emplace_back(node->index, distance_squared);
@@ -458,7 +456,7 @@ template <typename CoordinateType, std::size_t number_of_dimensions> class KDTre
         findAllNeighborsWithinRadiusSquaredRecursively(is_delta_positive ? node->left : node->right, target, index,
                                                        radius_squared, result);
 
-        if ((delta * delta <= radius_squared) || (distance_squared <= radius_squared))
+        if (delta * delta <= radius_squared)
         {
             findAllNeighborsWithinRadiusSquaredRecursively(is_delta_positive ? node->right : node->left, target, index,
                                                            radius_squared, result);
